@@ -293,6 +293,20 @@
             .hero { padding: 40px 0; }
             .card-product img { height: 160px; }
         }
+
+        .hover-shadow {
+            transition: all 0.3s ease;
+        }
+        .hover-shadow:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08) !important;
+        }
+        .transition-all {
+            transition: all 0.3s ease;
+        }
+        .badge {
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -325,6 +339,8 @@
                         </li>
                     @endif
                 @endauth
+
+                <li><a class="dropdown-item" href="{{ route('orders.index') }}"><i class="bi bi-box"></i> Мои заказы</a></li>
 
                 <li class="nav-item">
                     <a class="nav-link" href="{{ route('cart.index') }}">

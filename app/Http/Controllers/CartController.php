@@ -15,7 +15,7 @@ class CartController extends Controller
 
     public function index(): View
     {
-        $data = $this->cartService->getProductsWithCart();
+        $data = $this->cartService->getCartProducts();
         return view('cart', $data);
     }
 
@@ -42,16 +42,22 @@ class CartController extends Controller
 
     public function checkout(): View|RedirectResponse
     {
-        $data = $this->cartService->getProductsWithCart();
-        if (empty($data['products'])) {
-            return redirect()->route('cart.index')->with('error', 'Корзина пуста.');
+        try {
+            $this->cartService->validateCartForCheckout();
+            $data = $this->cartService->getCartProducts();
+            return view('checkout', $data);
+        } catch (\Exception $e) {
+            return redirect()->route('cart.index')->with('error', $e->getMessage());
         }
-        return view('checkout', $data);
     }
 
     public function placeOrder(PlaceOrderRequest $request): RedirectResponse
     {
-        $this->cartService->placeOrder($request->validated());
-        return redirect()->route('home')->with('success', 'Заказ оформлен! Спасибо за покупку.');
+        try {
+            $order = $this->cartService->placeOrder($request->validated());
+            return redirect()->route('home')->with('success', 'Заказ #' . $order->id . ' оформлен! Спасибо за покупку.');
+        } catch (\Exception $e) {
+            return redirect()->route('cart.index')->with('error', $e->getMessage());
+        }
     }
 }

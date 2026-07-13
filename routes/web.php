@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\OrderController as UserOrderController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ShopController;
 use App\Http\Controllers\Shop\CategoryController as ShopCategoryController;
 use App\Http\Controllers\Shop\HomeController;
 use App\Http\Controllers\Shop\ProductController as ShopProductController;
-use App\Http\Controllers\ShopController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -48,6 +49,10 @@ Route::middleware(['auth'])->group(function (): void {
             Route::post('/order', [CartController::class, 'placeOrder'])->name('placeOrder');
         });
 
+    // Заказы пользователя
+    Route::get('/orders', [UserOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{id}', [UserOrderController::class, 'show'])->name('orders.show');
+
     // Профиль
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -63,7 +68,7 @@ Route::middleware(['auth', 'admin'])
 
         Route::resource('/categories', CategoryController::class);
         Route::resource('/products', ProductController::class);
-        Route::resource('/orders', OrderController::class)->only(['index', 'show', 'update']);
+        Route::resource('/orders', AdminOrderController::class)->only(['index', 'show', 'update']);
     });
 
 // Тестовые маршруты (можно удалить в продакшене)

@@ -1,59 +1,93 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🛒 Интернет-магазин «Раздолье скидок»
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Полнофункциональный интернет-магазин на **Laravel 12** с админ-панелью, корзиной, системой заказов, автоматическим импортом товаров из Telegram и современным адаптивным дизайном.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 📋 Оглавление
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- [Возможности](#-возможности)
+- [Технологии](#-технологии)
+- [Требования к серверу](#-требования-к-серверу)
+- [Установка и настройка (локальная разработка)](#-установка-и-настройка-локальная-разработка)
+- [Развертывание на продакшен-сервере](#-развертывание-на-продакшен-сервере)
+    - [Настройка веб-сервера (Nginx)](#-настройка-веб-сервера-nginx)
+    - [Настройка прав доступа](#-настройка-прав-доступа)
+    - [Настройка планировщика (Cron)](#-настройка-планировщика-cron)
+- [Настройка Telegram-бота для импорта товаров](#-настройка-telegram-бота-для-импорта-товаров)
+- [Тестовые данные и доступ в админку](#-тестовые-данные-и-доступ-в-админку)
+- [Структура проекта](#-структура-проекта)
+- [Скриншоты](#-скриншоты)
+- [Лицензия](#-лицензия)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## 🚀 Возможности
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### 👤 Публичная часть
+- Главная страница с товарами (пагинация)
+- Боковое меню с категориями и подкатегориями (только те, в которых есть товары)
+- Фильтр **«Новое поступление»** (товары текущего месяца)
+- **Поиск** по названию, описанию, slug и категории
+- Страница товара с описанием, ценой, статусом наличия
+- Похожие товары из той же категории
+- Хлебные крошки (навигация по категориям)
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 🛒 Корзина и заказы
+- Добавление товаров в корзину (с проверкой остатков)
+- Изменение количества товаров
+- Оформление заказа с контактными данными и датой доставки
+- Привязка заказа к авторизованному пользователю
 
-## Laravel Sponsors
+### 🔐 Админ-панель
+- Управление категориями (вложенность до 2 уровней)
+- Управление товарами (CRUD + загрузка изображений)
+- Управление заказами (просмотр, смена статуса)
+- **Дашборд** со статистикой:
+    - Общее количество товаров, заказов, выручка
+    - Фильтр по времени (месяц, квартал, год, всё время)
+    - График продаж по месяцам
+    - Список последних заказов
+    - Статистика наличия товаров (в наличии, заканчиваются, нет в наличии)
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 🤖 Telegram-импорт
+- Автоматический импорт товаров из Telegram-канала
+- Парсинг полей: название, цена, состояние, количество, категория, подкатегория
+- Автоматическое создание категорий и подкатегорий
+- Скачивание и прикрепление изображений
 
-### Premium Partners
+---
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## 🧰 Технологии
 
-## Contributing
+| Компонент | Технология |
+|-----------|------------|
+| Бэкенд | PHP 8.2+, Laravel 12 |
+| Фронтенд | Bootstrap 5, Blade, CSS, JavaScript |
+| База данных | MySQL / MariaDB 10.4+ |
+| Авторизация | Laravel Breeze (аутентификация) |
+| HTTP-клиент | GuzzleHTTP |
+| Telegram API | Telegram Bot API |
+| Система сборки | Composer, Artisan |
+| Веб-сервер | Nginx / Apache (рекомендуется Nginx) |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+## 📦 Требования к серверу
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- PHP >= 8.2
+- Расширения PHP: `BCMath`, `Ctype`, `Fileinfo`, `JSON`, `Mbstring`, `OpenSSL`, `PDO`, `Tokenizer`, `XML`, `cURL`, `gd` (для работы с изображениями)
+- MySQL >= 5.7 или MariaDB >= 10.4
+- Composer
+- Git (для клонирования)
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## 🛠️ Установка и настройка (локальная разработка)
 
-## License
+### 1. Клонирование репозитория
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+git clone https://github.com/ваш-логин/razdolie-skidok.git
+cd razdolie-skidok
+

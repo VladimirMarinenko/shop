@@ -54,35 +54,39 @@
         </div>
     </div>
 
-    <!-- Похожие товары -->
-    @if($product->category)
-        @php
-            $similar = App\Models\Product::where('category_id', $product->category_id)
-                ->where('id', '!=', $product->id)
-                ->limit(4)
-                ->get();
-        @endphp
-        @if($similar->isNotEmpty())
-            <hr class="my-5">
-            <h3 class="section-title">Похожие товары</h3>
-            <div class="row">
-                @foreach($similar as $item)
-                    <div class="col-md-3 col-sm-6 mb-4">
-                        <div class="card card-product h-100">
-                            @if($item->image)
-                                <img src="{{ asset('storage/' . $item->image) }}" class="card-img-top" alt="{{ $item->name }}" style="height: 180px; object-fit: cover;">
-                            @else
-                                <img src="https://via.placeholder.com/300x180/dfe6e9/2d3436?text=Нет+фото" class="card-img-top" alt="Нет фото">
-                            @endif
-                            <div class="card-body d-flex flex-column">
-                                <h5 class="card-title">{{ $item->name }}</h5>
+    <!-- Рекомендуемые товары -->
+    @if($recommended)
+        <hr class="my-5">
+        <h3 class="section-title">{{ $title }}</h3>
+        <div class="row">
+            @foreach($recommended as $item)
+                <div class="col-md-3 col-sm-6 mb-4">
+                    <div class="card card-product h-100">
+                        @if($item->image)
+                            <img src="{{ asset('storage/' . $item->image) }}" class="card-img-top" alt="{{ $item->name }}" style="height: 180px; object-fit: cover;">
+                        @else
+                            <img src="https://via.placeholder.com/300x180/dfe6e9/2d3436?text=Нет+фото" class="card-img-top" alt="Нет фото">
+                        @endif
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">{{ $item->name }}</h5>
+                            <div class="d-flex justify-content-between align-items-center mt-auto">
                                 <span class="price">{{ number_format($item->price, 2) }} ₽</span>
-                                <a href="{{ route('product.show', $item->slug) }}" class="btn btn-outline-primary btn-sm mt-2">Подробнее</a>
+                                @if($item->stock > 0)
+                                    <form action="{{ route('cart.add', $item->id) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="btn-add" title="В корзину">
+                                            <i class="bi bi-cart-plus"></i>
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="badge bg-secondary">Нет</span>
+                                @endif
                             </div>
+                            <a href="{{ route('product.show', $item->slug) }}" class="btn btn-outline-primary btn-sm mt-2">Подробнее</a>
                         </div>
                     </div>
-                @endforeach
-            </div>
-        @endif
+                </div>
+            @endforeach
+        </div>
     @endif
 @endsection

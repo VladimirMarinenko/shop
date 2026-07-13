@@ -7,6 +7,7 @@ use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use App\Http\Requests\SearchRequest;
 
 class ShopController extends Controller
 {
@@ -47,31 +48,58 @@ class ShopController extends Controller
     public function show(string $slug): View
     {
         $product = Product::with('category')->where('slug', $slug)->firstOrFail();
-        return view('shop.product', compact('product'));
+        $similar = collect();
+        if ($product->category_id) {
+            $similar = Product::where('category_id', $product->category_id)
+                ->where('id', '!=', $product->id)
+                ->limit(4)
+                ->get();
+        }
+
+        $recommended = $similar;
+        $title = 'Похожие товары';
+        
+        if ($similar->count() < 4) {
+            $excludeIds = $similar->pluck('id')->push($product->id)->toArray();
+            $random = Product::whereNotIn('id', $excludeIds)
+                ->inRandomOrder()
+                ->limit(4 - $similar->count())
+                ->get();
+            $recommended = $similar->merge($random);
+        }
+        
+        if ($recommended->isEmpty()) {
+            $recommended = null;
+        }
+        if ($recommended) {
+            $title = $similar->isNotEmpty() ? 'Похожие товары' : 'Возможно, вас заинтересует';
+        }
+
+        return view('shop.product', compact('product', 'recommended', 'title'));
     }
 
-    public function search(Request $request): View|RedirectResponse
+    public function search(SearchRequest $request): View|RedirectResponse
     {
-        $query = $request->input('q');
-
-        if (empty($query)) {
+        if (!$request->hasValidQuery()) {
             return redirect()->route('home');
         }
 
+        $escapedQuery = $request->getEscapedQuery();
+
         $products = $this->getProductQuery()
-            ->where(function ($q) use ($query) {
-                $q->where('name', 'LIKE', "%{$query}%")
-                    ->orWhere('description', 'LIKE', "%{$query}%")
-                    ->orWhere('slug', 'LIKE', "%{$query}%")
-                    ->orWhereHas('category', function ($cat) use ($query) {
-                        $cat->where('name', 'LIKE', "%{$query}%");
+            ->where(function ($q) use ($escapedQuery) {
+                $q->where('name', 'LIKE', "%{$escapedQuery}%")
+                    ->orWhere('description', 'LIKE', "%{$escapedQuery}%")
+                    ->orWhere('slug', 'LIKE', "%{$escapedQuery}%")
+                    ->orWhereHas('category', function ($cat) use ($escapedQuery) {
+                        $cat->where('name', 'LIKE', "%{$escapedQuery}%");
                     });
             })
             ->paginate(12)
-            ->appends(['q' => $query]);
+            ->appends(['q' => $request->input('q')]); // исходный запрос для отображения
 
         $categories = $this->getActiveCategories();
-        $pageTitle = "Результаты поиска: «{$query}»";
+        $pageTitle = "Результаты поиска: «{$request->input('q')}»";
 
         return view('shop.index', compact('products', 'categories', 'pageTitle'));
     }
