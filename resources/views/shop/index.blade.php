@@ -3,6 +3,13 @@
 @section('title', 'Главная')
 
 @section('content')
+
+    @if(isset($pageTitle) && $products->isEmpty())
+        <div class="alert alert-info mt-3">
+            <i class="bi bi-info-circle"></i> По вашему запросу ничего не найдено. Попробуйте изменить ключевые слова.
+        </div>
+    @endif
+
     <!-- Hero -->
     <div class="hero">
         <div class="container">
@@ -28,6 +35,15 @@
                     </ol>
                 </nav>
             @endif
+
+                @if(isset($pageTitle))
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ route('home') }}">Главная</a></li>
+                            <li class="breadcrumb-item active">{{ $pageTitle }}</li>
+                        </ol>
+                    </nav>
+                @endif
 
             <h2 class="section-title">
                 @if(isset($category))

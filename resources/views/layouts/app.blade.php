@@ -432,6 +432,14 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto align-items-lg-center">
+
+                <li class="nav-item me-2">
+                    <form action="{{ route('shop.search') }}" method="GET" class="d-flex">
+                        <input class="form-control form-control-sm me-1" type="search" name="q" placeholder="Поиск..." aria-label="Search" value="{{ request('q') }}">
+                        <button class="btn btn-outline-light btn-sm" type="submit"><i class="bi bi-search"></i></button>
+                    </form>
+                </li>
+
                 @auth
                     @if(auth()->user()->isAdmin())
                         <li class="nav-item">

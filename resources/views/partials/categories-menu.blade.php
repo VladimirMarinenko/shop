@@ -4,9 +4,16 @@
             <!-- Все товары -->
             <li class="list-group-item border-0 py-2">
                 <a href="{{ route('home') }}"
-                   class="text-decoration-none d-flex align-items-center gap-2 {{ !request()->routeIs('category.products') ? 'fw-semibold text-primary' : 'text-dark' }}">
+                   class="text-decoration-none d-flex align-items-center gap-2 {{ request()->routeIs('home') ? 'fw-semibold text-primary' : 'text-dark' }}">
                     <i class="bi bi-grid-3x3-gap-fill fs-5"></i>
                     <span>Все товары</span>
+                </a>
+            </li>
+            <li class="list-group-item border-0 py-2">
+                <a href="{{ route('products.new') }}"
+                   class="text-decoration-none d-flex align-items-center gap-2 {{ request()->routeIs('products.new') ? 'fw-semibold text-primary' : 'text-dark' }}">
+                    <i class="bi bi-stars fs-5"></i>
+                    <span>⭐ Новинки</span>
                 </a>
             </li>
 

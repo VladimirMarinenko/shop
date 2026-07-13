@@ -11,6 +11,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Shop\CategoryController as ShopCategoryController;
 use App\Http\Controllers\Shop\HomeController;
 use App\Http\Controllers\Shop\ProductController as ShopProductController;
+use App\Http\Controllers\ShopController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -20,11 +21,11 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Публичные маршруты
-Route::get('/', [HomeController::class, 'index'])->name('home');
-
-Route::get('/category/{id}', [ShopCategoryController::class, 'show'])->name('category.products');
-
-Route::get('/product/{slug}', [ShopProductController::class, 'show'])->name('product.show');
+Route::get('/', [ShopController::class, 'index'])->name('home');
+Route::get('/category/{category}', [ShopController::class, 'category'])->name('category.products');
+Route::get('/new-products', [ShopController::class, 'newProducts'])->name('products.new');
+Route::get('/product/{slug}', [ShopController::class, 'show'])->name('product.show');
+Route::get('/search', [ShopController::class, 'search'])->name('shop.search');
 
 // Стандартный дашборд (для пользователей)
 Route::get('/dashboard', function () {
