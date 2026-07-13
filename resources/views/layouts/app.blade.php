@@ -351,20 +351,18 @@
                 </li>
 
                 @auth
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                    <li class="nav-item">
+                        <span class="nav-link" style="color: rgba(255,255,255,0.9); cursor: default;">
                             <i class="bi bi-person-circle"></i> {{ auth()->user()->name }}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-gear"></i> Профиль</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form method="POST" action="{{ route('logout') }}">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right"></i> Выйти</button>
-                                </form>
-                            </li>
-                        </ul>
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <form method="POST" action="{{ route('logout') }}" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-link nav-link" style="color: rgba(255,255,255,0.55); border: none; background: transparent; padding: 0.5rem 0;">
+                                <i class="bi bi-box-arrow-right"></i> Выйти
+                            </button>
+                        </form>
                     </li>
                 @else
                     <li class="nav-item"><a class="nav-link" href="{{ route('login') }}">Войти</a></li>

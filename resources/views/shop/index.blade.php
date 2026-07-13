@@ -15,7 +15,10 @@
         <div class="container">
             <h1>🔥 Откройте мир лучших товаров</h1>
             <p>Качественные товары по выгодным ценам — только у нас</p>
-            <a href="#products" class="btn btn-hero">Начать покупки</a>
+
+            @guest
+                <a href="{{ route('login') }}" class="btn btn-hero">Начать покупки</a>
+            @endguest
         </div>
     </div>
 
