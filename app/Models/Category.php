@@ -33,14 +33,16 @@ class Category extends Model
      */
     public function hasProductsRecursive(): bool
     {
-        if ($this->products()->count() > 0) {
+        if ($this->products()->where('stock', '>', 0)->exists()) {
             return true;
         }
+
         foreach ($this->children as $child) {
             if ($child->hasProductsRecursive()) {
                 return true;
             }
         }
+
         return false;
     }
 

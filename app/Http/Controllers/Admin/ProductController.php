@@ -3,89 +3,71 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Product;
-use App\Models\Category;
-use Illuminate\Support\Facades\Storage;
+use App\Http\Requests\Admin\StoreProductRequest;
+use App\Http\Requests\Admin\UpdateProductRequest;
+use App\Services\ProductService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function __construct(
+        protected ProductService $productService
+    ) {}
+
+    public function index(): View
     {
-        $products = Product::with('category')->paginate(10);
+        $products = $this->productService->getPaginatedProducts(10);
         return view('admin.products.index', compact('products'));
     }
 
-    public function create()
+    public function create(): View
     {
-        $categories = Category::pluck('name', 'id');
+        $categories = $this->productService->getCategoriesList();
         return view('admin.products.create', compact('categories'));
     }
 
-    public function store(Request $request)
+    public function store(StoreProductRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'category_id' => 'nullable|exists:categories,id',
-            'name'        => 'required|string|max:255',
-            'slug'        => 'required|string|max:255|unique:products,slug',
-            'description' => 'nullable|string',
-            'price'       => 'required|numeric|min:0',
-            'stock'       => 'required|integer|min:0',
-            'image'       => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-        ]);
+        $this->productService->createProduct(
+            $request->validated(),
+            $request->file('image')
+        );
 
-        if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('products', 'public');
-            $validated['image'] = $path;
-        }
-
-        Product::create($validated);
-
-        return redirect()->route('admin.products.index')->with('success', 'Товар создан!');
+        return redirect()
+            ->route('admin.products.index')
+            ->with('success', 'Товар создан!');
     }
 
-    public function edit(string $id)
+    public function edit(int $id): View
     {
-        $product = Product::findOrFail($id);
-        $categories = Category::pluck('name', 'id');
+        $product = $this->productService->findProduct($id);
+        $categories = $this->productService->getCategoriesList();
         return view('admin.products.edit', compact('product', 'categories'));
     }
 
-    public function update(Request $request, string $id)
+    public function update(UpdateProductRequest $request, int $id): RedirectResponse
     {
-        $product = Product::findOrFail($id);
+        $product = $this->productService->findProduct($id);
 
-        $validated = $request->validate([
-            'category_id' => 'nullable|exists:categories,id',
-            'name'        => 'required|string|max:255',
-            'slug'        => 'required|string|max:255|unique:products,slug,' . $id,
-            'description' => 'nullable|string',
-            'price'       => 'required|numeric|min:0',
-            'stock'       => 'required|integer|min:0',
-            'image'       => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-        ]);
+        $this->productService->updateProduct(
+            $product,
+            $request->validated(),
+            $request->file('image')
+        );
 
-        if ($request->hasFile('image')) {
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
-            }
-            $path = $request->file('image')->store('products', 'public');
-            $validated['image'] = $path;
-        }
-
-        $product->update($validated);
-
-        return redirect()->route('admin.products.index')->with('success', 'Товар обновлён!');
+        return redirect()
+            ->route('admin.products.index')
+            ->with('success', 'Товар обновлён!');
     }
 
-    public function destroy(string $id)
+    public function destroy(int $id): RedirectResponse
     {
-        $product = Product::findOrFail($id);
-        if ($product->image) {
-            Storage::disk('public')->delete($product->image);
-        }
-        $product->delete();
+        $product = $this->productService->findProduct($id);
+        $this->productService->deleteProduct($product);
 
-        return redirect()->route('admin.products.index')->with('success', 'Товар удалён!');
+        return redirect()
+            ->route('admin.products.index')
+            ->with('success', 'Товар удалён!');
     }
 }

@@ -2,152 +2,56 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
-use Illuminate\Http\Request;
-use App\Models\Order;
-use App\Models\OrderItem;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\PlaceOrderRequest;
+use App\Services\CartService;
+use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class CartController extends Controller
 {
-    /**
-     * Показать содержимое корзины
-     */
-    public function index()
+    public function __construct(
+        protected CartService $cartService
+    ) {}
+
+    public function index(): View
     {
-        $cart = session()->get('cart', []);
-        $products = Product::whereIn('id', array_keys($cart))->get();
-        $totalPrice = 0;
-        foreach ($products as $product) {
-            $totalPrice += $product->price * $cart[$product->id];
-        }
-        return view('cart', compact('products', 'cart', 'totalPrice'));
+        $data = $this->cartService->getProductsWithCart();
+        return view('cart', $data);
     }
 
-    /**
-     * Добавить товар в корзину
-     */
-    public function add($productId)
+    public function add(int $productId): RedirectResponse
     {
-        $product = Product::findOrFail($productId);
-        if ($product->stock <= 0) {
-            return redirect()->back()->with('error', 'Товара нет в наличии!');
-        }
-
-        $cart = session()->get('cart', []);
-
-        if (isset($cart[$productId])) {
-            if ($cart[$productId] >= $product->stock) {
-                return redirect()->back()->with('error', 'Недостаточно товара на складе!');
-            }
-            $cart[$productId] += 1;
-        } else {
-            $cart[$productId] = 1;
-        }
-
-        session()->put('cart', $cart);
-
-        return redirect()->back()->with('success', 'Товар добавлен в корзину!');
+        $result = $this->cartService->addProduct($productId);
+        return redirect()->back()->with(
+            $result['success'] ? 'success' : 'error',
+            $result['message']
+        );
     }
 
-    /**
-     * Удалить одну единицу товара
-     */
-    public function remove($productId)
+    public function remove(int $productId): RedirectResponse
     {
-        $cart = session()->get('cart', []);
-        if (isset($cart[$productId])) {
-            if ($cart[$productId] > 1) {
-                $cart[$productId] -= 1;
-            } else {
-                unset($cart[$productId]);
-            }
-            session()->put('cart', $cart);
-        }
+        $this->cartService->removeProduct($productId);
         return redirect()->route('cart.index')->with('success', 'Товар удалён из корзины.');
     }
 
-    /**
-     * Полная очистка корзины
-     */
-    public function clear()
+    public function clear(): RedirectResponse
     {
-        session()->forget('cart');
+        $this->cartService->clearCart();
         return redirect()->route('cart.index')->with('success', 'Корзина очищена.');
     }
 
-    /**
-     * Показать форму оформления заказа
-     */
-    public function checkout()
+    public function checkout(): View|RedirectResponse
     {
-        $cart = session()->get('cart', []);
-        if (empty($cart)) {
+        $data = $this->cartService->getProductsWithCart();
+        if (empty($data['products'])) {
             return redirect()->route('cart.index')->with('error', 'Корзина пуста.');
         }
-        $products = Product::whereIn('id', array_keys($cart))->get();
-        $totalPrice = 0;
-        foreach ($products as $product) {
-            $totalPrice += $product->price * $cart[$product->id];
-        }
-        return view('checkout', compact('products', 'cart', 'totalPrice'));
+        return view('checkout', $data);
     }
 
-    /**
-     * Сохранить заказ
-     */
-    public function placeOrder(Request $request)
+    public function placeOrder(PlaceOrderRequest $request): RedirectResponse
     {
-        // Валидация
-        $request->validate([
-            'customer_name' => 'required|string|max:255',
-            'email'         => 'required|email|max:255',
-            'phone'         => 'required|string|max:20',
-            'comment'       => 'nullable|string|max:500',
-            'delivery_date' => 'nullable|date|after:now', // дата должна быть в будущем
-        ]);
-
-        // Получаем корзину
-        $cart = session()->get('cart', []);
-        if (empty($cart)) {
-            return redirect()->route('cart.index')->with('error', 'Корзина пуста.');
-        }
-
-        // Получаем товары и считаем сумму
-        $products = Product::whereIn('id', array_keys($cart))->get();
-        $totalPrice = 0;
-        foreach ($products as $product) {
-            $totalPrice += $product->price * $cart[$product->id];
-        }
-
-        // Создаём заказ
-        $order = Order::create([
-            'user_id'       => Auth::id(),
-            'status'        => 'new',
-            'total_price'   => $totalPrice,
-            'total'         => $totalPrice,
-            'customer_name' => $request->customer_name,
-            'email'         => $request->email,
-            'phone'         => $request->phone,
-            'address'       => '',
-            'comment'       => $request->comment,
-            'delivery_date' => $request->delivery_date,
-        ]);
-
-        // Создаём позиции заказа
-        foreach ($products as $product) {
-            OrderItem::create([
-                'order_id'     => $order->id,
-                'product_id'   => $product->id,
-                'product_name' => $product->name,
-                'quantity'     => $cart[$product->id],
-                'price'        => $product->price,
-            ]);
-        }
-
-        // Очищаем корзину
-        session()->forget('cart');
-
+        $this->cartService->placeOrder($request->validated());
         return redirect()->route('home')->with('success', 'Заказ оформлен! Спасибо за покупку.');
     }
 }
