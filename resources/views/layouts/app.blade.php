@@ -7,157 +7,46 @@
     <!-- Bootstrap + иконки -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <!-- Google Fonts (лёгкий и красивый шрифт) -->
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        * { font-family: 'Inter', sans-serif; }
-        body { background: #f8f9fa; }
-        .navbar {
-            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
-            background: #ffffff !important;
-        }
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 1.6rem;
-            color: #2d3436 !important;
-        }
-        .navbar-brand i { color: #6c5ce7; margin-right: 6px; }
-        .nav-link { color: #2d3436 !important; font-weight: 500; }
-        .nav-link:hover { color: #6c5ce7 !important; }
-        .cart-badge {
-            background: #6c5ce7;
-            color: #fff;
-            border-radius: 50%;
-            padding: 0.15rem 0.5rem;
-            font-size: 0.7rem;
-            margin-left: 4px;
-        }
-        .hero {
-            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
-            color: #fff;
-            padding: 50px 0 40px;
-            border-radius: 0 0 40px 40px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-        .hero h1 { font-size: 2.8rem; font-weight: 700; }
-        .hero p { font-size: 1.2rem; opacity: 0.9; }
-        .btn-hero {
-            background: #fff;
-            color: #6c5ce7;
-            border-radius: 50px;
-            padding: 0.6rem 2.2rem;
-            font-weight: 600;
-            border: none;
-            transition: 0.2s;
-        }
-        .btn-hero:hover { transform: scale(1.05); background: #f0f0f0; }
-        .card-product {
-            border: none;
-            border-radius: 20px;
-            overflow: hidden;
-            transition: transform 0.25s, box-shadow 0.25s;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            background: #fff;
-            height: 100%;
-        }
-        .card-product:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 12px 30px rgba(0,0,0,0.12);
-        }
-        .card-product img {
-            height: 200px;
-            object-fit: cover;
-            transition: transform 0.3s;
-        }
-        .card-product:hover img { transform: scale(1.03); }
-        .card-product .card-body { padding: 1.2rem; }
-        .card-product .card-title { font-weight: 600; font-size: 1.1rem; }
-        .card-product .price { font-weight: 700; color: #2d3436; font-size: 1.3rem; }
-        .btn-add {
-            background: #6c5ce7;
-            border: none;
-            border-radius: 30px;
-            padding: 0.3rem 1.2rem;
-            font-weight: 600;
-            color: #fff;
-            transition: 0.2s;
-        }
-        .btn-add:hover { background: #5a4bd1; transform: scale(1.05); }
-        .btn-outline-add {
-            border: 1px solid #6c5ce7;
-            color: #6c5ce7;
-            background: transparent;
-            border-radius: 30px;
-            padding: 0.3rem 1.2rem;
-            font-weight: 600;
-            transition: 0.2s;
-        }
-        .btn-outline-add:hover { background: #6c5ce7; color: #fff; }
-        .pagination-custom .page-link {
-            border-radius: 30px;
-            margin: 0 4px;
-            color: #2d3436;
-            border: 1px solid #e0e0e0;
-        }
-        .pagination-custom .page-item.active .page-link {
-            background: #6c5ce7;
-            border-color: #6c5ce7;
-            color: #fff;
-        }
-        footer {
-            background: #2d3436;
-            color: #dfe6e9;
-            padding: 30px 0;
-            margin-top: 50px;
-        }
-        footer a { color: #dfe6e9; text-decoration: none; }
-        footer a:hover { color: #fff; }
-        .section-title {
-            font-weight: 700;
-            color: #2d3436;
-            position: relative;
-            padding-bottom: 10px;
-            margin-bottom: 1.5rem;
-        }
-        .section-title::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 60px;
-            height: 4px;
-            background: #6c5ce7;
-            border-radius: 2px;
-        }
-        @media (max-width: 768px) {
-            .hero h1 { font-size: 2rem; }
-            .hero { padding: 30px 0; }
+        /* ── Глобальные стили ── */
+        * {
+            font-family: 'Inter', sans-serif;
+            box-sizing: border-box;
         }
         html, body {
             height: 100%;
+            margin: 0;
         }
         body {
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-        }
-        main {
-            flex: 1 0 auto;
-        }
-        footer {
-            flex-shrink: 0;
-        }
-
-        <style>
-         * {
-             font-family: 'Inter', sans-serif;
-             box-sizing: border-box;
-         }
-        body {
             background: #f5f7fa;
             color: #1a1a2e;
         }
+        main {
+            flex: 1 0 auto;  /* занимает всё свободное пространство */
+        }
+        footer {
+            flex-shrink: 0;
+            background: #1a1a2e;
+            color: #ced4da;
+            padding: 30px 0;
+            margin-top: 40px;
+            border-radius: 40px 40px 0 0;
+        }
+        footer a {
+            color: #ced4da;
+            transition: 0.2s;
+        }
+        footer a:hover {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        /* ── Навигация ── */
         .navbar {
             background: rgba(255, 255, 255, 0.8) !important;
             backdrop-filter: blur(12px);
@@ -169,6 +58,13 @@
             font-size: 1.6rem;
             color: #1a1a2e !important;
             letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .navbar-brand img {
+            height: 40px;
+            width: auto;
         }
         .navbar-brand i {
             color: #6c5ce7;
@@ -205,6 +101,8 @@
             margin-left: 4px;
             font-weight: 600;
         }
+
+        /* ── Hero ── */
         .hero {
             background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
             border-radius: 0 0 40px 40px;
@@ -255,6 +153,8 @@
             box-shadow: 0 12px 35px rgba(0,0,0,0.15);
             background: #f8f9fa;
         }
+
+        /* ── Карточки товаров ── */
         .card-product {
             border: none;
             border-radius: 20px;
@@ -319,6 +219,8 @@
             background: #f5f3ff;
             color: #6c5ce7;
         }
+
+        /* ── Разное ── */
         .section-title {
             font-weight: 700;
             font-size: 1.8rem;
@@ -348,7 +250,14 @@
             font-weight: 500;
         }
         .list-group-item a:hover {
-            color: #6c5ce7;
+            color: #6c5ce7 !important;
+            transform: translateX(4px);
+        }
+        .list-group-item a i {
+            transition: transform 0.15s ease;
+        }
+        .list-group-item a:hover i {
+            transform: scale(1.1);
         }
         .badge-soft {
             background: rgba(108, 92, 231, 0.1);
@@ -378,54 +287,21 @@
             color: #1a1a2e;
             font-weight: 500;
         }
-        footer {
-            background: #1a1a2e;
-            color: #ced4da;
-            padding: 40px 0;
-            margin-top: 60px;
-            border-radius: 40px 40px 0 0;
-        }
-        footer a {
-            color: #ced4da;
-            transition: 0.2s;
-        }
-        footer a:hover {
-            color: #fff;
-            text-decoration: none;
-        }
+
         @media (max-width: 768px) {
             .hero h1 { font-size: 2.2rem; }
             .hero { padding: 40px 0; }
             .card-product img { height: 160px; }
         }
-
-        /* Категории меню */
-        .list-group-item {
-            transition: background 0.15s ease;
-        }
-        .list-group-item a {
-            transition: color 0.15s ease, transform 0.15s ease;
-        }
-        .list-group-item a:hover {
-            color: #6c5ce7 !important;
-            transform: translateX(4px);
-        }
-        .list-group-item a i {
-            transition: transform 0.15s ease;
-        }
-        .list-group-item a:hover i {
-            transform: scale(1.1);
-        }
-
     </style>
-
 </head>
 <body>
 
 <nav class="navbar navbar-expand-lg">
     <div class="container">
         <a class="navbar-brand" href="{{ route('home') }}">
-            <img src="{{ asset('img/photo_2026-02-11_18-32-54.jpg') }}" alt="Раздолье скидок" height="40">Раздолье скидок
+            <img src="{{ asset('img/photo_2026-02-11_18-32-54.jpg') }}" alt="Раздолье скидок">
+            Раздолье скидок
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
@@ -501,8 +377,12 @@
     </div>
 </main>
 
-<p class="mb-0">&copy; {{ date('Y') }} Раздолье скидок. Все права защищены.</p>
-<small class="text-muted">Сделано с ❤️</small>
+<footer>
+    <div class="container text-center">
+        <p class="mb-0">&copy; {{ date('Y') }} Раздолье скидок. Все права защищены.</p>
+        <small class="text-muted">Сделано с ❤️</small>
+    </div>
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
