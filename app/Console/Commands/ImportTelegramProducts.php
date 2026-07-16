@@ -23,166 +23,245 @@ class ImportTelegramProducts extends Command
         $this->channelId = env('TELEGRAM_CHANNEL_ID');
     }
 
+    protected function getClient(): Client
+    {
+        $config = [
+            'timeout' => 30,
+            'connect_timeout' => 30,
+        ];
+
+        $proxyType = env('TELEGRAM_PROXY_TYPE');
+        $proxyAddress = env('TELEGRAM_PROXY_ADDRESS');
+        $proxyPort = env('TELEGRAM_PROXY_PORT');
+
+        if ($proxyType && $proxyAddress && $proxyPort) {
+            $proxy = $proxyType . '://' . $proxyAddress . ':' . $proxyPort;
+            $username = env('TELEGRAM_PROXY_USERNAME');
+            $password = env('TELEGRAM_PROXY_PASSWORD');
+            if ($username && $password) {
+                $proxy = $proxyType . '://' . $username . ':' . $password . '@' . $proxyAddress . ':' . $proxyPort;
+            }
+            $config['proxy'] = $proxy;
+            $this->info("Используется прокси: {$proxy}");
+        }
+
+        return new Client($config);
+    }
+
     public function handle()
     {
-        $this->info('Токен: ' . $this->botToken);
-        $this->info('Канал: ' . $this->channelId);
-
-        $client = new Client();
-        $url = "https://api.telegram.org/bot{$this->botToken}/getUpdates";
-
-        $this->info("Запрос к $url");
-
-        $response = $client->get($url, [
-            'query' => [
-                'offset' => -1,   // попробуйте -1, чтобы получить последнее сообщение
-                'limit' => 10
-            ]
-        ]);
-
-        $data = json_decode($response->getBody(), true);
-        $this->info('Ответ: ' . print_r($data, true));
-
-        if (!isset($data['ok']) || !$data['ok']) {
-            $this->error('Ошибка получения обновлений');
+        if (!$this->botToken || !$this->channelId) {
+            $this->error('TELEGRAM_BOT_TOKEN или TELEGRAM_CHANNEL_ID не указаны в .env');
             return;
         }
 
-        $updates = $data['result'];
-        $count = 0;
+        $limit = $this->argument('limit');
+        $client = $this->getClient();
 
-        foreach ($updates as $update) {
-            if (!isset($update['channel_post'])) continue;
+        try {
+            $url = "https://api.telegram.org/bot{$this->botToken}/getUpdates";
+            $response = $client->get($url, [
+                'query' => [
+                    'limit' => $limit
+                ]
+            ]);
 
-            $message = $update['channel_post'];
-            $text = $message['text'] ?? '';
-            $photo = $message['photo'] ?? null;
+            $data = json_decode($response->getBody(), true);
 
-            $parsed = $this->parseProduct($text);
-
-            if (!$parsed) {
-                $this->warn('Не удалось распарсить сообщение: ' . substr($text, 0, 50) . '...');
-                continue;
-            }
-
-            // Проверяем дубликат по названию и цене
-            $exists = Product::where('name', $parsed['name'])
-                ->where('price', $parsed['price'])
-                ->exists();
-
-            if ($exists) {
-                $this->info("Товар '{$parsed['name']}' уже существует");
-                continue;
-            }
-
-            // Получаем или создаём категорию
-            $categoryId = $this->getOrCreateCategory($parsed['category'], null);
-
-            // Если есть подкатегория, создаём её внутри категории
-            if (!empty($parsed['subcategory'])) {
-                $subCategoryId = $this->getOrCreateCategory($parsed['subcategory'], $categoryId);
-                $finalCategoryId = $subCategoryId;
+            // ============ ОТЛАДКА ============
+            $this->info('🔍 Ответ от Telegram:');
+            $this->info('ok: ' . ($data['ok'] ? 'true' : 'false'));
+            $this->info('Количество обновлений: ' . count($data['result'] ?? []));
+            if (isset($data['result'][0])) {
+                $this->info('Первое обновление:');
+                dump($data['result'][0]);
             } else {
-                $finalCategoryId = $categoryId;
+                $this->info('нет обновлений');
+            }
+            // =================================
+
+            if (!isset($data['ok']) || !$data['ok']) {
+                $this->error('Ошибка получения обновлений');
+                return;
             }
 
-            // Создаём товар
-            $product = new Product();
-            $product->name = $parsed['name'];
-            $product->price = $parsed['price'];
-            $product->slug = Str::slug($parsed['name']);
-            $product->stock = $parsed['quantity'] ?? 1;
-            $product->category_id = $finalCategoryId;
-            $product->description = "Состояние: {$parsed['condition']}\nКоличество: {$parsed['quantity']} шт.";
+            $updates = $data['result'];
+            $count = 0;
 
-            // Если есть фото, скачиваем
-            if ($photo) {
-                $fileId = end($photo)['file_id'];
-                $filePath = $this->downloadPhoto($fileId);
-                if ($filePath) {
-                    $product->image = $filePath;
+            foreach ($updates as $update) {
+                if (!isset($update['channel_post'])) {
+                    $this->warn('⚠️ Пропущено: нет channel_post');
+                    continue;
                 }
-            }
 
-            $product->save();
-            $count++;
-            $this->info("Импортирован товар: {$product->name} в категорию '{$parsed['category']}'" . (!empty($parsed['subcategory']) ? " / '{$parsed['subcategory']}'" : ''));
+                $message = $update['channel_post'];
+                $text = $message['caption'] ?? '';
+                if (empty($text)) {
+                    $this->warn('⚠️ Сообщение без текста (только фото)');
+                    continue;
+                }
+                $photo = $message['photo'] ?? null;
+
+                $this->info('📝 Сообщение: ' . substr($text, 0, 100) . '...');
+
+                $parsed = $this->parseProduct($text);
+
+                if (!$parsed) {
+                    $this->warn('❌ Не удалось распарсить сообщение:');
+                    $this->warn('Полный текст: ' . $text);
+                    continue;
+                }
+
+                $this->info('✅ Распарсено: ' . json_encode($parsed, JSON_UNESCAPED_UNICODE));
+
+                // Проверяем дубликат по названию и цене
+                $exists = Product::where('name', $parsed['name'])
+                    ->where('price', $parsed['price'])
+                    ->exists();
+
+                if ($exists) {
+                    $this->info("⏭️ Товар уже существует: {$parsed['name']}");
+                    continue;
+                }
+
+                // Получаем или создаём категорию (если не указана, используем "Без категории")
+                $categoryName = $parsed['category'] ?? 'Без категории';
+                $categoryId = $this->getOrCreateCategory($categoryName, null);
+
+                // Подкатегория (если есть)
+                if (!empty($parsed['subcategory'])) {
+                    $subCategoryId = $this->getOrCreateCategory($parsed['subcategory'], $categoryId);
+                    $finalCategoryId = $subCategoryId;
+                } else {
+                    $finalCategoryId = $categoryId;
+                }
+
+                // Создаём товар
+                $product = new Product();
+                $product->name = $parsed['name'];
+                $product->price = $parsed['price'];
+                $product->slug = Str::slug($parsed['name'] . '-' . uniqid());
+                $product->stock = $parsed['quantity'] ?? 1;
+                $product->category_id = $finalCategoryId;
+                $product->description = "Состояние: {$parsed['condition']}\nКоличество: {$parsed['quantity']} шт.";
+
+                $this->info('📦 Попытка сохранить товар: ' . $product->name);
+                $this->info('   slug: ' . $product->slug);
+                $this->info('   price: ' . $product->price);
+                $this->info('   category_id: ' . $product->category_id);
+
+                // Фото
+                if ($photo) {
+                    $this->info('📸 Есть фото, скачиваем...');
+                    $fileId = end($photo)['file_id'];
+                    $filePath = $this->downloadPhoto($fileId);
+                    if ($filePath) {
+                        $product->image = $filePath;
+                        $this->info('   фото сохранено: ' . $filePath);
+                    } else {
+                        $this->warn('   не удалось скачать фото');
+                    }
+                } else {
+                    $this->info('📸 Фото отсутствует');
+                }
+
+                try {
+                    $product->save();
+                    $count++;
+                    $this->info("✅ Импортирован товар: {$product->name} (ID: {$product->id})");
+                } catch (\Exception $e) {
+                    $this->error("❌ Ошибка при сохранении товара: " . $e->getMessage());
+                    $this->error("   Трассировка: " . $e->getTraceAsString());
+                }
+            } // ← закрывающая скобка foreach
+
+            $this->info("🎉 Импортировано товаров: {$count}");
+
+        } catch (\Exception $e) {
+            $this->error('❌ Ошибка: ' . $e->getMessage());
+            $this->error($e->getTraceAsString());
         }
-
-        $this->info("Импортировано товаров: {$count}");
     }
 
     /**
      * Парсит сообщение и возвращает массив с данными товара.
+     * Адаптирован под формат:
+     *   Название
+     *   Размер (опционально)
+     *   Наша цена XXX₽
+     *   Новое
+     *   Писать: ...
      */
     protected function parseProduct($text)
     {
         $lines = array_map('trim', explode("\n", $text));
-        $data = [];
+        $data = [
+            'name' => null,
+            'price' => null,
+            'condition' => 'Новое',
+            'quantity' => 1,
+            'category' => 'Без категории',
+            'subcategory' => null,
+            'size' => null,
+        ];
 
         foreach ($lines as $line) {
             if (empty($line)) continue;
 
-            // Название — первая непустая строка (без ключевого слова)
-            if (!isset($data['name']) && !str_contains($line, 'Наша цена') && !str_contains($line, 'Состояние') && !str_contains($line, 'Количество') && !str_contains($line, 'Категория') && !str_contains($line, 'Подкатегория')) {
-                $data['name'] = $line;
-                continue;
-            }
-
-            // Цена
-            if (preg_match('/Наша цена\s*(\d+)\s*₽/u', $line, $matches)) {
+            if (preg_match('/Наша цена\s*(\d+)\s*(?:₽|р)/u', $line, $matches)) {
                 $data['price'] = (float) $matches[1];
                 continue;
             }
 
-            // Состояние
-            if (preg_match('/Состояние\s*(.+)/u', $line, $matches)) {
-                $data['condition'] = trim($matches[1]);
+            if ($line === 'Новое') {
+                $data['condition'] = 'Новое';
                 continue;
             }
 
-            // Количество
-            if (preg_match('/Количество\s*(\d+)\s*шт/u', $line, $matches)) {
-                $data['quantity'] = (int) $matches[1];
+            if (str_contains($line, 'Писать:')) {
+                break;
+            }
+
+            if (str_starts_with($line, '@')) {
                 continue;
             }
 
-            // Категория
-            if (preg_match('/Категория\s*(.+)/u', $line, $matches)) {
-                $data['category'] = trim($matches[1]);
+            if (str_contains($line, 'Размер')) {
+                $data['size'] = $line;
                 continue;
             }
 
-            // Подкатегория
-            if (preg_match('/Подкатегория\s*(.+)/u', $line, $matches)) {
-                $data['subcategory'] = trim($matches[1]);
-                continue;
+            if (!$data['name'] && !str_contains($line, 'Наша цена') && !str_contains($line, 'Писать:')) {
+                $data['name'] = $line;
             }
         }
 
-        // Проверяем обязательные поля
-        if (empty($data['name']) || empty($data['price']) || empty($data['category'])) {
+        if (empty($data['name']) || empty($data['price'])) {
             return null;
         }
 
-        // Значения по умолчанию
-        $data['condition'] = $data['condition'] ?? 'Новое';
-        $data['quantity'] = $data['quantity'] ?? 1;
-        $data['subcategory'] = $data['subcategory'] ?? null;
+        if (empty($data['name']) && !empty($data['price'])) {
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if (empty($line)) continue;
+                if (!str_contains($line, 'Наша цена') && !str_contains($line, 'Писать:') && !str_starts_with($line, '@')) {
+                    $data['name'] = $line;
+                    break;
+                }
+            }
+        }
 
         return $data;
     }
 
     /**
      * Получает или создаёт категорию.
-     * Если передан $parentId, создаёт подкатегорию.
      */
     protected function getOrCreateCategory($name, $parentId = null)
     {
         $name = trim($name);
         if (empty($name)) return null;
 
-        // Ищем существующую
         $query = Category::where('name', $name);
         if ($parentId !== null) {
             $query->where('parent_id', $parentId);
@@ -208,13 +287,15 @@ class ImportTelegramProducts extends Command
      */
     protected function downloadPhoto($fileId)
     {
-        $client = new Client();
+        $client = $this->getClient(); // теперь с прокси
 
         $fileUrl = "https://api.telegram.org/bot{$this->botToken}/getFile";
         $response = $client->get($fileUrl, ['query' => ['file_id' => $fileId]]);
         $data = json_decode($response->getBody(), true);
 
-        if (!isset($data['ok']) || !$data['ok']) return null;
+        if (!isset($data['ok']) || !$data['ok']) {
+            return null;
+        }
 
         $filePath = $data['result']['file_path'];
         $downloadUrl = "https://api.telegram.org/file/bot{$this->botToken}/{$filePath}";

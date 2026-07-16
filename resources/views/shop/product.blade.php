@@ -16,7 +16,7 @@
     <div class="row">
         <div class="col-md-6">
             @if($product->image)
-                <img src="{{ asset('storage/' . $product->image) }}" class="img-fluid rounded-3 shadow" alt="{{ $product->name }}" style="max-height: 500px; width: 100%; object-fit: cover;">
+                <img src="{{ asset('storage/' . $product->image) }}" class="img-fluid rounded-3 shadow" alt="{{ $product->name }}" style="width: 100%; object-fit: cover;">
             @else
                 <img src="https://via.placeholder.com/600x500/dfe6e9/2d3436?text=Нет+фото" class="img-fluid rounded-3 shadow" alt="Нет фото">
             @endif

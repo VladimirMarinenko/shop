@@ -69,6 +69,7 @@ Route::middleware(['auth', 'admin'])
         Route::resource('/categories', CategoryController::class);
         Route::resource('/products', ProductController::class);
         Route::resource('/orders', AdminOrderController::class)->only(['index', 'show', 'update']);
+        Route::get('/orders/{id}/details', [AdminOrderController::class, 'details'])->name('orders.details');
     });
 
 // Тестовые маршруты (можно удалить в продакшене)

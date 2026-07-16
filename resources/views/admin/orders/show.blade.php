@@ -108,13 +108,17 @@
 
         <div class="col-md-6">
             <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Товары в заказе</h5>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">🛍️ Товары в заказе</h5>
+                    <a href="{{ route('admin.orders.details', $order->id) }}" class="btn btn-sm btn-outline-primary">
+                        📋 Подробнее (для сборки)
+                    </a>
                 </div>
                 <div class="card-body">
                     <table class="table table-sm">
                         <thead>
                         <tr>
+                            <th>Артикул</th>  <!-- Новая колонка -->
                             <th>Товар</th>
                             <th>Кол-во</th>
                             <th>Цена</th>
@@ -124,6 +128,13 @@
                         <tbody>
                         @foreach($order->items as $item)
                             <tr>
+                                <td>
+                                    @if($item->product)
+                                        #{{ $item->product_id }}
+                                    @else
+                                        <span class="text-muted">—</span>
+                                    @endif
+                                </td>
                                 <td>{{ $item->product->name ?? $item->product_name ?? 'Товар удалён' }}</td>
                                 <td>{{ $item->quantity }}</td>
                                 <td>{{ number_format($item->price, 2) }} ₽</td>
@@ -133,7 +144,7 @@
                         </tbody>
                         <tfoot>
                         <tr>
-                            <td colspan="3" class="text-end"><strong>Итого:</strong></td>
+                            <td colspan="4" class="text-end"><strong>Итого:</strong></td>
                             <td><strong>{{ number_format($order->total_price, 2) }} ₽</strong></td>
                         </tr>
                         </tfoot>

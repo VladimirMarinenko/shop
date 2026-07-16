@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
+use App\Models\Order;
 
 class OrderController extends Controller
 {
@@ -42,5 +43,11 @@ class OrderController extends Controller
         return redirect()
             ->route('admin.orders.show', $order->id)
             ->with('success', $result['message']);
+    }
+
+    public function details($id)
+    {
+        $order = Order::with(['user', 'items.product'])->findOrFail($id);
+        return view('admin.orders.details', compact('order'));
     }
 }

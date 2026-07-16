@@ -1,6 +1,5 @@
 <?php
 
-
 declare(strict_types=1);
 
 namespace App\Http\Controllers\Shop;
@@ -8,6 +7,7 @@ namespace App\Http\Controllers\Shop;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\View\View;
+use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {

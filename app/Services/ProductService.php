@@ -54,4 +54,20 @@ class ProductService
         }
         $product->delete();
     }
+
+    public function getFilteredProducts(?string $search = null, int $perPage = 25)
+    {
+        $query = Product::with('category');
+
+        if (!empty($search)) {
+            $search = trim($search);
+            // Ищем по ID (точное совпадение) или по названию (частичное)
+            $query->where(function ($q) use ($search) {
+                $q->where('id', $search)
+                    ->orWhere('name', 'LIKE', "%{$search}%");
+            });
+        }
+
+        return $query->orderBy('id', 'desc')->paginate($perPage);
+    }
 }

@@ -36,6 +36,39 @@
         .navbar-brand {
             font-weight: bold;
         }
+
+        .card-img-top {
+            transition: transform 0.2s;
+        }
+        .card-img-top:hover {
+            transform: scale(1.02);
+        }
+
+        .pagination {
+            gap: 4px;
+        }
+        .pagination .page-link {
+            border-radius: 30px !important;
+            border: 1px solid #e0e0e0;
+            color: #2d3436;
+            font-weight: 500;
+            padding: 0.4rem 0.9rem;
+            transition: 0.2s;
+        }
+        .pagination .page-link:hover {
+            background: #f5f3ff;
+            border-color: #6c5ce7;
+            color: #6c5ce7;
+        }
+        .pagination .page-item.active .page-link {
+            background: #6c5ce7;
+            border-color: #6c5ce7;
+            color: #fff;
+        }
+        .pagination .page-item.disabled .page-link {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
