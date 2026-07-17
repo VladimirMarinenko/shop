@@ -124,9 +124,8 @@ class ImportTelegramProducts extends Command
                     continue;
                 }
 
-                // Получаем или создаём категорию (если не указана, используем "Без категории")
-                $categoryName = $parsed['category'] ?? 'Без категории';
-                $categoryId = $this->getOrCreateCategory($categoryName, null);
+                // Получаем или создаём категорию
+                $categoryId = $this->getOrCreateCategory($parsed['category'], null);
 
                 // Подкатегория (если есть)
                 if (!empty($parsed['subcategory'])) {
@@ -173,7 +172,7 @@ class ImportTelegramProducts extends Command
                     $this->error("❌ Ошибка при сохранении товара: " . $e->getMessage());
                     $this->error("   Трассировка: " . $e->getTraceAsString());
                 }
-            } // ← закрывающая скобка foreach
+            }
 
             $this->info("🎉 Импортировано товаров: {$count}");
 
@@ -185,12 +184,7 @@ class ImportTelegramProducts extends Command
 
     /**
      * Парсит сообщение и возвращает массив с данными товара.
-     * Адаптирован под формат:
-     *   Название
-     *   Размер (опционально)
-     *   Наша цена XXX₽
-     *   Новое
-     *   Писать: ...
+     * Поддерживает оба формата: с префиксами (Название:, Наша цена:) и без.
      */
     protected function parseProduct($text)
     {
@@ -208,47 +202,120 @@ class ImportTelegramProducts extends Command
         foreach ($lines as $line) {
             if (empty($line)) continue;
 
-            if (preg_match('/Наша цена\s*(\d+)\s*(?:₽|р)/u', $line, $matches)) {
-                $data['price'] = (float) $matches[1];
+            $lower = mb_strtolower($line);
+
+            // --- ЦЕНА: ищем "Наша цена" или "цена" + число (без обязательной валюты) ---
+            if (str_contains($lower, 'наша цена') || str_contains($lower, 'цена:')) {
+                if (preg_match('/(\d+)/u', $line, $matches)) {
+                    $data['price'] = (float) $matches[1];
+                }
                 continue;
             }
 
-            if ($line === 'Новое') {
-                $data['condition'] = 'Новое';
+            // --- СОСТОЯНИЕ ---
+            if (str_contains($lower, 'состояние')) {
+                if (preg_match('/состояние\s*:?\s*(.+)/ui', $line, $matches)) {
+                    $data['condition'] = trim($matches[1]);
+                }
                 continue;
             }
 
-            if (str_contains($line, 'Писать:')) {
+            // --- КОЛИЧЕСТВО: ищем "количество", "колличество", "кол-во" + число (без обязательного "шт") ---
+            if (str_contains($lower, 'количество') || str_contains($lower, 'колличество') || str_contains($lower, 'кол-во')) {
+                if (preg_match('/(\d+)/u', $line, $matches)) {
+                    $data['quantity'] = (int) $matches[1];
+                }
+                continue;
+            }
+
+            // --- КАТЕГОРИЯ (исключаем подкатегории) ---
+            if (str_contains($lower, 'категория') && !str_contains($lower, 'подкатегория') && !str_contains($lower, 'под категория')) {
+                if (preg_match('/категория\s*:?\s*(.+)/ui', $line, $matches)) {
+                    $data['category'] = trim($matches[1]);
+                }
+                continue;
+            }
+
+            // --- ПОДКАТЕГОРИЯ ---
+            if (str_contains($lower, 'подкатегория') || str_contains($lower, 'под категория')) {
+                if (preg_match('/под\s*категория\s*:?\s*(.+)/ui', $line, $matches)) {
+                    $data['subcategory'] = trim($matches[1]);
+                }
+                continue;
+            }
+
+            // --- РАЗМЕР ---
+            if (str_contains($lower, 'размер')) {
+                if (preg_match('/размер\s*:?\s*(.+)/ui', $line, $matches)) {
+                    $data['size'] = trim($matches[1]);
+                }
+                continue;
+            }
+
+            // --- ОСТАНОВКА: "Писать:" ---
+            if (str_contains($lower, 'писать:')) {
                 break;
             }
 
+            // --- КОНТАКТЫ (@...) ---
             if (str_starts_with($line, '@')) {
                 continue;
             }
 
-            if (str_contains($line, 'Размер')) {
-                $data['size'] = $line;
-                continue;
+            // --- НАЗВАНИЕ ---
+            if (!$data['name']) {
+                if (str_contains($lower, 'название:')) {
+                    if (preg_match('/название\s*:?\s*(.+)/ui', $line, $matches)) {
+                        $data['name'] = trim($matches[1]);
+                    }
+                } else {
+                    $keywords = ['наша цена', 'цена', 'состояние', 'количество', 'колличество', 'кол-во', 'категория', 'подкатегория', 'под категория', 'размер', 'писать:'];
+                    $isKeyword = false;
+                    foreach ($keywords as $kw) {
+                        if (str_contains($lower, $kw)) {
+                            $isKeyword = true;
+                            break;
+                        }
+                    }
+                    if (!$isKeyword && !str_starts_with($line, '@')) {
+                        $data['name'] = $line;
+                    }
+                }
             }
+        }
 
-            if (!$data['name'] && !str_contains($line, 'Наша цена') && !str_contains($line, 'Писать:')) {
-                $data['name'] = $line;
+        // Если цена не найдена, пробуем найти любое число в тексте (как последний шанс)
+        if (empty($data['price'])) {
+            if (preg_match('/(\d+)/u', $text, $matches)) {
+                // Проверяем, что это не количество (если количество уже найдено и равно этому числу — пропускаем)
+                if ($data['quantity'] != (int)$matches[1]) {
+                    $data['price'] = (float) $matches[1];
+                }
+            }
+        }
+
+        // Если название не найдено, но цена есть — берём первую неключевую строку
+        if (empty($data['name']) && !empty($data['price'])) {
+            foreach ($lines as $line) {
+                if (empty($line)) continue;
+                $lower = mb_strtolower($line);
+                $keywords = ['наша цена', 'цена', 'состояние', 'количество', 'колличество', 'кол-во', 'категория', 'подкатегория', 'под категория', 'размер', 'писать:'];
+                $isKeyword = false;
+                foreach ($keywords as $kw) {
+                    if (str_contains($lower, $kw)) {
+                        $isKeyword = true;
+                        break;
+                    }
+                }
+                if (!$isKeyword && !str_starts_with($line, '@')) {
+                    $data['name'] = $line;
+                    break;
+                }
             }
         }
 
         if (empty($data['name']) || empty($data['price'])) {
             return null;
-        }
-
-        if (empty($data['name']) && !empty($data['price'])) {
-            foreach ($lines as $line) {
-                $line = trim($line);
-                if (empty($line)) continue;
-                if (!str_contains($line, 'Наша цена') && !str_contains($line, 'Писать:') && !str_starts_with($line, '@')) {
-                    $data['name'] = $line;
-                    break;
-                }
-            }
         }
 
         return $data;
@@ -287,7 +354,7 @@ class ImportTelegramProducts extends Command
      */
     protected function downloadPhoto($fileId)
     {
-        $client = $this->getClient(); // теперь с прокси
+        $client = $this->getClient();
 
         $fileUrl = "https://api.telegram.org/bot{$this->botToken}/getFile";
         $response = $client->get($fileUrl, ['query' => ['file_id' => $fileId]]);

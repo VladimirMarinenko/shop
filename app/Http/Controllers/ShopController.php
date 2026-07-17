@@ -11,10 +11,34 @@ use App\Http\Requests\SearchRequest;
 
 class ShopController extends Controller
 {
-    public function index(): View
+    public function index(Request $request)
     {
-        $products = $this->getProductQuery()->paginate(12);
+        $query = $request->input('search');
+        $categoryId = $request->input('category');
+        $page = $request->input('page', 1);
+
+        $productsQuery = Product::with('category')->where('stock', '>', 0);
+
+        if (!empty($query)) {
+            $productsQuery->where(function ($q) use ($query) {
+                $q->where('name', 'LIKE', "%{$query}%")
+                    ->orWhere('description', 'LIKE', "%{$query}%")
+                    ->orWhere('slug', 'LIKE', "%{$query}%")
+                    ->orWhereHas('category', function ($cat) use ($query) {
+                        $cat->where('name', 'LIKE', "%{$query}%");
+                    });
+            });
+        }
+
+        if ($categoryId) {
+            $productsQuery->where('category_id', $categoryId);
+        }
+
+        $products = $productsQuery->paginate(12, ['*'], 'page', $page);
         $categories = $this->getActiveCategories();
+        if ($request->ajax()) {
+            return view('shop.partials.products', compact('products'));
+        }
 
         return view('shop.index', compact('products', 'categories'));
     }
@@ -58,7 +82,7 @@ class ShopController extends Controller
 
         $recommended = $similar;
         $title = 'Похожие товары';
-        
+
         if ($similar->count() < 4) {
             $excludeIds = $similar->pluck('id')->push($product->id)->toArray();
             $random = Product::whereNotIn('id', $excludeIds)
@@ -67,7 +91,7 @@ class ShopController extends Controller
                 ->get();
             $recommended = $similar->merge($random);
         }
-        
+
         if ($recommended->isEmpty()) {
             $recommended = null;
         }
@@ -121,5 +145,32 @@ class ShopController extends Controller
             ->whereNull('parent_id')
             ->get()
             ->filter(fn($cat) => $cat->hasProductsRecursive());
+    }
+
+    public function loadProducts(Request $request)
+    {
+        $query = $request->input('search');
+        $categoryId = $request->input('category');
+        $page = $request->input('page', 1);
+
+        $productsQuery = Product::with('category')->where('stock', '>', 0);
+
+        if (!empty($query)) {
+            $productsQuery->where(function ($q) use ($query) {
+                $q->where('name', 'LIKE', "%{$query}%")
+                    ->orWhere('description', 'LIKE', "%{$query}%")
+                    ->orWhere('slug', 'LIKE', "%{$query}%")
+                    ->orWhereHas('category', function ($cat) use ($query) {
+                        $cat->where('name', 'LIKE', "%{$query}%");
+                    });
+            });
+        }
+
+        if ($categoryId) {
+            $productsQuery->where('category_id', $categoryId);
+        }
+
+        $products = $productsQuery->paginate(12, ['*'], 'page', $page);
+        return view('shop.partials.products', compact('products'))->render();
     }
 }

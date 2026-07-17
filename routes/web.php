@@ -27,6 +27,7 @@ Route::get('/category/{category}', [ShopController::class, 'category'])->name('c
 Route::get('/new-products', [ShopController::class, 'newProducts'])->name('products.new');
 Route::get('/product/{slug}', [ShopController::class, 'show'])->name('product.show');
 Route::get('/search', [ShopController::class, 'search'])->name('shop.search');
+Route::get('/load-products', [ShopController::class, 'loadProducts'])->name('shop.load');
 
 // Стандартный дашборд (для пользователей)
 Route::get('/dashboard', function () {

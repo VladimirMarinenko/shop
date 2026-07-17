@@ -39,14 +39,14 @@
                 </nav>
             @endif
 
-                @if(isset($pageTitle))
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="{{ route('home') }}">Главная</a></li>
-                            <li class="breadcrumb-item active">{{ $pageTitle }}</li>
-                        </ol>
-                    </nav>
-                @endif
+            @if(isset($pageTitle))
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ route('home') }}">Главная</a></li>
+                        <li class="breadcrumb-item active">{{ $pageTitle }}</li>
+                    </ol>
+                </nav>
+            @endif
 
             <h2 class="section-title">
                 @if(isset($category))
@@ -56,44 +56,104 @@
                 @endif
             </h2>
 
-            <div class="row g-4">
-                @forelse($products as $product)
-                    <div class="col-md-6 col-xl-4">
-                        <div class="card card-product h-100">
-                            @if($product->image)
-                                <img src="{{ asset('storage/' . $product->image) }}" class="card-img-top" alt="{{ $product->name }}">
-                            @else
-                                <img src="https://placehold.co/300x220/e0e0e0/6c5ce7?text=Нет+фото" class="card-img-top" alt="Нет фото">
-                            @endif
-                            <div class="card-body d-flex flex-column">
-                                <h5 class="card-title">{{ $product->name }}</h5>
-                                <p class="text-muted small">{{ $product->category ? $product->category->name : 'Без категории' }}</p>
-                                <div class="d-flex justify-content-between align-items-center mt-auto">
-                                    <span class="price">{{ number_format($product->price, 2) }} ₽</span>
-                                    @if($product->stock > 0)
-                                        <form action="{{ route('cart.add', $product->id) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn-add"><i class="bi bi-cart-plus"></i></button>
-                                        </form>
-                                    @else
-                                        <span class="badge bg-secondary">Нет</span>
-                                    @endif
-                                </div>
-                                <a href="{{ route('product.show', $product->slug) }}" class="btn btn-outline-add w-100 mt-2">Подробнее</a>
-                            </div>
-                        </div>
-                    </div>
-                @empty
-                    <div class="col-12 text-center py-5">
-                        <i class="bi bi-box display-1 text-muted"></i>
-                        <p class="mt-3">Товары не найдены.</p>
-                    </div>
-                @endforelse
+            <!-- Контейнер для товаров -->
+            <div id="products-container" class="row g-4">
+                @include('shop.partials.products')
             </div>
 
-            <div class="d-flex justify-content-center mt-5">
-                {{ $products->links('pagination::bootstrap-5') }}
+            <!-- Индикатор загрузки -->
+            <div id="loader" class="text-center py-4" style="display: none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Загрузка...</span>
+                </div>
+            </div>
+
+            <!-- Сентринель для Infinity Scroll (невидимый элемент в конце) -->
+            <div id="sentinel" style="height: 1px; width: 100%;"></div>
+
+            <!-- Сообщение, если товары закончились -->
+            <div id="end-message" class="text-center py-3 text-muted" style="display: none;">
+                <i class="bi bi-check-circle"></i> Вы просмотрели все товары
             </div>
         </div>
     </div>
+
+    <script>
+            document.addEventListener('DOMContentLoaded', function() {
+            let page = {{ $products->currentPage() }};
+            let lastPage = {{ $products->lastPage() }};
+            let isLoading = false;
+            let hasMore = page < lastPage;
+
+            const search = new URLSearchParams(window.location.search).get('search') || '';
+            const category = new URLSearchParams(window.location.search).get('category') || '';
+
+            const container = document.getElementById('products-container');
+            const loader = document.getElementById('loader');
+            const sentinel = document.getElementById('sentinel');
+            const endMessage = document.getElementById('end-message');
+
+            function loadMore() {
+            if (isLoading || !hasMore) return;
+            if (page >= lastPage) {
+            hasMore = false;
+            endMessage.style.display = 'block';
+            return;
+        }
+
+            isLoading = true;
+            page++;
+            loader.style.display = 'block';
+
+            const url = new URL('{{ route('shop.load') }}');
+            url.searchParams.set('page', page);
+            if (search) url.searchParams.set('search', search);
+            if (category) url.searchParams.set('category', category);
+
+            fetch(url, {
+            headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+        })
+            .then(response => {
+            if (!response.ok) throw new Error('Ошибка загрузки');
+            return response.text();
+        })
+            .then(html => {
+            container.insertAdjacentHTML('beforeend', html);
+            loader.style.display = 'none';
+            isLoading = false;
+
+            if (page >= lastPage) {
+            hasMore = false;
+            endMessage.style.display = 'block';
+            sentinel.style.display = 'none';
+        }
+        })
+            .catch(error => {
+            console.error('Ошибка загрузки товаров:', error);
+            loader.style.display = 'none';
+            isLoading = false;
+        });
+        }
+
+            if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver(function(entries) {
+            if (entries[0].isIntersecting && hasMore && !isLoading) {
+            loadMore();
+        }
+        }, { rootMargin: '0px 0px 200px 0px' });
+            observer.observe(sentinel);
+        } else {
+            window.addEventListener('scroll', function() {
+            const rect = sentinel.getBoundingClientRect();
+            if (rect.top <= window.innerHeight + 200 && hasMore && !isLoading) {
+            loadMore();
+        }
+        });
+        }
+        });
+    </script>
+
+
 @endsection

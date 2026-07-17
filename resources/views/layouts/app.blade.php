@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Раздолье скидок')</title>
@@ -307,6 +308,19 @@
         .badge {
             font-weight: 600;
         }
+
+        #scrollToTopBtn {
+            background: #6c5ce7;
+            color: #fff;
+            transition: transform 0.2s, background 0.2s;
+        }
+        #scrollToTopBtn:hover {
+            background: #5a4bd1;
+            transform: scale(1.1);
+        }
+        #scrollToTopBtn:active {
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
@@ -399,5 +413,158 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Кнопка "Наверх" -->
+<button id="scrollToTopBtn" class="btn btn-primary rounded-circle shadow" style="position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; display: none; align-items: center; justify-content: center; z-index: 9999; font-size: 1.5rem; border: none; transition: all 0.3s ease;">
+    <i class="bi bi-arrow-up"></i>
+</button>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const btn = document.getElementById('scrollToTopBtn');
+
+        // Показываем кнопку при прокрутке вниз
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 300) {
+                btn.style.display = 'flex';
+            } else {
+                btn.style.display = 'none';
+            }
+        });
+
+        // Плавная прокрутка вверх
+        btn.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Обработка кликабельных карточек (главная и страница товара)
+        document.querySelectorAll('.js-product-card').forEach(function(card) {
+            card.addEventListener('click', function(e) {
+                // Если клик был по кнопке, ссылке или форме — не переходим
+                if (e.target.closest('a, button, form')) {
+                    return;
+                }
+                const url = this.dataset.url;
+                if (url) {
+                    window.location.href = url;
+                }
+            });
+        });
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // ----- ДЕЛЕГИРОВАНИЕ ДЛЯ ФОРМ ДОБАВЛЕНИЯ В КОРЗИНУ -----
+        document.addEventListener('submit', function(e) {
+            const form = e.target.closest('form.js-add-to-cart');
+            if (!form) return;
+
+            e.preventDefault(); // Останавливаем обычную отправку
+
+            console.log('✅ Форма перехвачена!');
+
+            const url = form.action;
+            const formData = new FormData(form);
+            const btn = form.querySelector('button[type="submit"]');
+            const originalHtml = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const badge = document.querySelector('.cart-badge');
+                        if (badge) {
+                            badge.textContent = data.cart_count;
+                        }
+                        showToast('success', data.message);
+                    } else {
+                        showToast('danger', data.message || 'Ошибка добавления');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    showToast('danger', 'Ошибка при добавлении в корзину');
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                });
+        });
+
+        // ----- ДЕЛЕГИРОВАНИЕ ДЛЯ КЛИКАБЕЛЬНЫХ КАРТОЧЕК -----
+        document.addEventListener('click', function(e) {
+            const card = e.target.closest('.js-product-card');
+            if (!card) return;
+            if (e.target.closest('a, button, form')) return;
+            const url = card.dataset.url;
+            if (url) {
+                window.location.href = url;
+            }
+        });
+
+        // ----- ФУНКЦИЯ ДЛЯ УВЕДОМЛЕНИЙ -----
+        function showToast(type, message) {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.position = 'fixed';
+                container.style.bottom = '20px';
+                container.style.right = '20px';
+                container.style.zIndex = '9999';
+                container.style.maxWidth = '350px';
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type} alert-dismissible fade show shadow`;
+            toast.role = 'alert';
+            toast.style.marginTop = '10px';
+            toast.innerHTML = `
+                <i class="bi bi-${type === 'success' ? 'check-circle-fill' : 'exclamation-circle-fill'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // ----- КНОПКА "НАВЕРХ" -----
+        const btn = document.getElementById('scrollToTopBtn');
+        if (btn) {
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 300) {
+                    btn.style.display = 'flex';
+                } else {
+                    btn.style.display = 'none';
+                }
+            });
+            btn.addEventListener('click', function() {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
+    });
+</script>
 </body>
 </html>
